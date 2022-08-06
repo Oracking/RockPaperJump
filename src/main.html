@@ -1,0 +1,164 @@
+<html>
+    <head>
+    </head>
+    <body>
+        <svg width="100%" height="100%">
+            <circle cx="100" cy="100" r="20" stroke="black" stroke-width="4" fill="#DDDDDD" id="0" />
+            <circle cx="170" cy="100" r="20" stroke="black" stroke-width="4" fill="#DDDDDD" id="1" />
+            <circle cx="240" cy="100" r="20" stroke="black" stroke-width="4" fill="#DDDDDD" id="2" />
+            <circle cx="310" cy="100" r="20" stroke="black" stroke-width="4" fill="#DDDDDD" id="3" />
+            <circle cx="380" cy="100" r="20" stroke="black" stroke-width="4" fill="#DDDDDD" id="4" />
+            <circle cx="450" cy="100" r="20" stroke="black" stroke-width="4" fill="#DDDDDD" id="5" />
+            <circle cx="520" cy="100" r="20" stroke="black" stroke-width="4" fill="#DDDDDD" id="6" />
+            <circle cx="590" cy="100" r="20" stroke="black" stroke-width="4" fill="#DDDDDD" id="7" />
+            <text x="100" y="200" id="player1Choice">Player 1: </text>
+            <text x="400" y="200" id="player2Choice">Player 2: </text>
+
+        </svg>
+
+    </body>
+
+    <script>
+                                       // rock     paper    scissors
+        const rockPaperScissorsEncoded = [1,       2,       3];
+        const decodedRockPaperScissors = [null, "Rock", "Paper", "Scissors"];
+
+        const generateAveragePlayerSpeed = (meanSpeed, standardDeviation, distribution) => {
+            switch (distribution){
+                default:
+                    const residue = Math.random();
+                    let multiplier = residue > 0.5 ? -(residue - 0.5): residue;
+                    multiplier *= 2;
+                    return meanSpeed + standardDeviation * multiplier
+            }
+        }
+
+        class GameEngine {
+            constructor(visualizeGame){
+                this.visualizeGame = visualizeGame;
+                this.lastGridPosition = 7;
+                this.initializeGame();
+            }
+
+            initializeGame(){
+                const averageSpeedGenerator = () => {return generateAveragePlayerSpeed(1.2, 0.3, "equal")}
+                this.leftPlayer = new Player(averageSpeedGenerator);
+                this.rightPlayer = new Player(averageSpeedGenerator);
+            }
+
+            playGame(){
+                this.updateGrid();
+                this.clearPlayerChoice();
+
+                if (this.leftPlayer.playerPosition + this.rightPlayer.playerPosition == (this.lastGridPosition - 1)){
+                    const loser = this.squareOff();
+                    this.showPlayerChoice(loser);   
+                    if (loser?.playerPosition === 0){
+                        this.declareWinner();
+                        return;
+                    }
+                    setTimeout(() => {
+                        loser?.initializePlayer();
+                        this.playGame();
+                    }, 2000);
+                    return;
+                }
+
+                const players = [this.leftPlayer, this.rightPlayer];
+                players.sort((p1, p2) => p1.timeToNextMove - p2.timeToNextMove);
+                players[1].timeToNextMove = players[1].playerSpeed - players[0].timeToNextMove;
+                setTimeout(() => {
+                    players[0].moveForward()
+                    this.playGame();
+                }, players[0].timeToNextMove * 1000);  
+            }
+
+            declareWinner(){
+                console.log("We have a winner!");
+            }
+
+            updateGrid(){
+                if (this.visualizeGame){
+                    document.getElementById(this.leftPlayer.playerPosition)?.setAttribute("fill", "#DD5555");
+                    document.getElementById(this.leftPlayer.prevPosition)?.setAttribute("fill", "#DDDDDD");
+                    document.getElementById(this.lastGridPosition - this.rightPlayer.playerPosition)?.setAttribute("fill", "#55DD55");
+                    if (this.lastGridPosition - this.rightPlayer.prevPosition != this.leftPlayer.playerPosition){
+                        document.getElementById(this.lastGridPosition - this.rightPlayer.prevPosition)?.setAttribute("fill", "#DDDDDD");
+                    }
+                }
+            }
+
+            squareOff(){
+                let loser = null;
+                this.leftPlayer.timeToNextMove = this.leftPlayer.playerSpeed;
+                this.rightPlayer.timeToNextMove = this.rightPlayer.playerSpeed;
+                const leftPlayerChoice = this.leftPlayer.rockPaperScissors;
+                const rightPlayerChoice = this.rightPlayer.rockPaperScissors;
+                const playerChoices = [[leftPlayerChoice, this.leftPlayer], [rightPlayerChoice, this.rightPlayer]].sort()
+                loser = this.getLoserOfSquareOff(playerChoices);
+                return loser;
+            }
+
+            showPlayerChoice(loser){
+                if (this.visualizeGame){
+                    const player1Choice = decodedRockPaperScissors[this.leftPlayer.rockPaperScissorsChoice];
+                    const player2Choice = decodedRockPaperScissors[this.rightPlayer.rockPaperScissorsChoice];
+                    document.getElementById("player1Choice").innerHTML = "Player 1: " + (this.leftPlayer === loser ? player1Choice + "  :(((" : player1Choice);
+                    document.getElementById("player2Choice").innerHTML = "Player 2: " + (this.rightPlayer === loser ? player2Choice + "  :(((" : player2Choice);
+                }
+            }
+
+            clearPlayerChoice(){
+                if (this.visualizeGame){
+                    document.getElementById("player1Choice").innerText = "Player 1:";
+                    document.getElementById("player2Choice").innerText = "Player 2:";
+                }
+            }
+
+            getLoserOfSquareOff(playerChoices){
+                const [player1Choice, player1] = playerChoices[0];
+                const [player2Choice, player2] = playerChoices[1];
+                switch (player2Choice - player1Choice){
+                    case 1:
+                        return player1;
+                    case 2:
+                        return player2;
+                    default:
+                        return null
+                }
+            }
+        }
+
+        class Player {
+
+            constructor(averageSpeedGenerator){
+                this.averageSpeedGenerator = averageSpeedGenerator
+                this.rockPaperScissorsChoice = null;
+                this.initializePlayer();
+            }
+
+            get rockPaperScissors(){
+                this.rockPaperScissorsChoice = rockPaperScissorsEncoded[Math.floor(Math.random()*rockPaperScissorsEncoded.length)];
+                return this.rockPaperScissorsChoice;
+            }
+
+            moveForward(){
+                this.prevPosition = this.playerPosition;
+                this.playerPosition += 1;
+                this.timeToNextMove = this.playerSpeed;
+            }
+
+            initializePlayer(){
+                this.prevPosition = this.playerPosition;
+                this.playerPosition = 0;
+                this.playerSpeed = this.averageSpeedGenerator();
+                this.timeToNextMove = this.playerSpeed;
+            }
+        }
+
+        const gameEngine = new GameEngine(true);
+        gameEngine.playGame();
+
+    </script>
+
+</html>
